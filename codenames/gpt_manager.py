@@ -2,6 +2,12 @@ from openai import OpenAI
 
 openAI_api_key = "ENTER YOUR API KEY HERE"
 
+# llama.cpp server exposes an OpenAI-compatible API; point the client at it
+# instead of OpenAI's own endpoint. The API key is unused by llama.cpp but
+# the OpenAI client requires a non-empty string.
+llama_cpp_base_url = "http://127.0.0.1:8080/v1"
+llama_cpp_api_key = "not-needed"
+
 # https://czechgames.com/files/rules/codenames-rules-en.pdf
 # Codemaster = Spymaster, Guesser = Field Operative
 game_rules = """
@@ -38,15 +44,19 @@ class GPT:
     def __init__(self, system_prompt, version):
         super().__init__()
         self.model_version = version
-        self.client = OpenAI(api_key=openAI_api_key)
+        self.client = OpenAI(api_key=llama_cpp_api_key, base_url=llama_cpp_base_url)
         self.conversation_history = [{"role": "system", "content": system_prompt}]
 
     def talk_to_ai(self, prompt):
         self.conversation_history.append({"role": "user", "content": prompt})
-        response = self.client.chat.completions.create(
+        message = self.client.chat.completions.create(
             messages=self.conversation_history,
             model=self.model_version,
-            max_tokens=512
-        ).choices[0].message.content
+            max_tokens=512,
+            # local model has "thinking" enabled by default, which fills up
+            # max_tokens with reasoning_content and leaves content empty
+            extra_body={"chat_template_kwargs": {"enable_thinking": False}}
+        ).choices[0].message
+        response = message.content or getattr(message, "reasoning_content", None)
         self.conversation_history.append({"role": "assistant", "content": response})
         return response

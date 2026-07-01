@@ -11,7 +11,7 @@ class AIGuesser(Guesser):
         self.num = 0
         self.guesses = 0
         system_prompt = game_rules + "You are playing the game Codenames as the " + team + " Guesser. "
-        self.manager = GPT(system_prompt=system_prompt, version="gpt-4o-2024-05-13")
+        self.manager = GPT(system_prompt=system_prompt, version="gemma-4-12b-qat")
 
     def set_board(self, words):
         self.words = words
@@ -19,6 +19,8 @@ class AIGuesser(Guesser):
     def set_clue(self, clue, num):
         self.clue = clue
         self.num = num
+        # Reset the per-turn guess counter so the internal (assist) cap stays coherent.
+        self.guesses = 0
         print("The clue is:", clue, num)
         li = [clue, num]
         return li
@@ -54,10 +56,12 @@ class AIGuesser(Guesser):
             remaining_options.append(self.words[i])
         return remaining_options
 
-    def get_answer(self):
+    def get_answer(self, feedback=None):
         invalid_timer = 0
         guess = None
-        prompt = ""
+        # Seed the prompt with the Game's rejection reason (if any) so the model
+        # knows why its previous guess was rejected on a re-request.
+        prompt = (feedback + " ") if feedback else ""
         while guess is None:
             prompt += "The remaining words are: " + str(self.get_remaining_options()) + ". "
             prompt += "The following is the Codemaster's clue: (" + str(self.clue) + ", " + str(self.num) + "). "

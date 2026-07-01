@@ -137,7 +137,7 @@ Other optional arguments include:
   * game_name in logfile
 
 An example simulation of a game between two teams of GPT-4 Codemasters and Guessers in the terminal from codenames/:  
-`$ python run_game.py players.codemaster_GPT.AICodemaster players.guesser_GPT.AIGuesser players.codemaster_GPT.AICodemaster players.guesser_GPT.AIGuesser --seed 3442
+`$ uv run python run_game.py players.codemaster_GPT.AICodemaster players.guesser_GPT.AIGuesser players.codemaster_GPT.AICodemaster players.guesser_GPT.AIGuesser --seed 3442
 
 ## Running the game from calling Game(...).run()
 
@@ -303,24 +303,24 @@ Play proceeds, passing back and forth, until one of three outcomes is achieved:
 * You select the assassin tile -- you lose
 
 ## Prerequisite: Installation and Downloads
-Note: The installation of the [Anaconda Distribution](https://www.anaconda.com/download) should be used for certain dependencies to work without issues.
+This project uses [uv](https://docs.astral.sh/uv/) to manage its Python environment and dependencies.
 
 Example installation order:
 ```
-(base) conda create --name codenames python=3.9
-(base) conda activate codenames
-(codenames) pip install -U colorama
-(codenames) pip install -U openai
-(codenames) git clone https://github.com/stepmat/Codenames_GPT.git
-(codenames) cd Codenames_GPT
+git clone https://github.com/stepmat/Codenames_GPT.git
+cd Codenames_GPT
+uv sync
 ```
 
-Alternatively, you can use your system's packaging system. (*apt-get* on Debian, or *MacPorts/Homebrew* on macOS)
-Or just use Python's packaging system, pip3, which is included by default from the Python binary installer.
+`uv sync` creates a `.venv` virtual environment and installs the pinned dependencies (`colorama`, `openai`) from the project's `pyproject.toml` / `uv.lock`.
+
+To run any script in the project, prefix it with `uv run`, e.g. `uv run python codenames/run_game.py ...` (or `cd codenames` first and drop the `codenames/` prefix). This ensures the command runs inside the project's managed virtual environment without needing to manually activate it.
+
+Alternatively, you can use your system's packaging system (*apt-get* on Debian, or *MacPorts/Homebrew* on macOS), or plain pip3, if you prefer to manage the environment yourself.
 
 
 ## OpenAI GPT Agent
 
 * Open gpt_manager.py and add your OpenAI API key near the top of the file where it says, "ENTER YOUR API KEY HERE".
 * After this, you should be able to use the codemaster_GPT and guesser_GPT agents.
-* For example, running "python simple_example.py" will perform a single game between both GPT agents.
+* For example, running "uv run python simple_example.py" (from the `codenames/` directory) will perform a single game between both GPT agents.

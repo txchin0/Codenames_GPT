@@ -23,30 +23,33 @@ class Codemaster(ABC):
         pass
 
     @abstractmethod
-    def get_clue(self):
-        """Function that returns a clue word and number of estimated related words on the board"""
+    def get_clue(self, feedback=None):
+        """Function that returns a clue word and number of estimated related words on the board.
+
+        feedback: optional reason (str) from the Game explaining why the previous clue was
+        rejected, so the codemaster can correct it on a re-request."""
         pass
 
 
 class HumanCodemaster(Codemaster):
 
-    def __init__(self):
+    def __init__(self, team="Red"):
         super().__init__()
         self.team = team
-        pass
 
     def set_game_state(self, words_in_play, map_in_play):
         self.words = words_in_play
         self.maps = map_in_play
 
-    def get_clue(self):
+    def get_clue(self, feedback=None):
+        if feedback:
+            print("Previous clue rejected: " + feedback)
         clue_input = input("Input CM Clue:\nPlease enter a Word followed by a space and a Number >> ")
         clue_input = clue_input.strip()
-        type(clue_input)
-        clue = clue_input.split(" ")
+        temp_clue = clue_input.split(" ")
 
         if len(temp_clue) == 1:
-            clue = [temp_clue[0],1]
+            clue = [temp_clue[0], 1]
         else:
             clue = [temp_clue[0], int(temp_clue[1])]
         return clue

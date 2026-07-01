@@ -1,0 +1,9 @@
+[project]
+name = "codenames-gpt"
+version = "0.1.0"
+description = "Codenames AI Competition Framework"
+requires-python = ">=3.9"
+dependencies = [
+    "colorama>=0.4",
+    "openai>=1.0",
+]

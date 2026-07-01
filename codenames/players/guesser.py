@@ -33,18 +33,20 @@ class Guesser(ABC):
         pass
 
     @abstractmethod
-    def get_answer(self):
-        """Return the guessed word based on the clue and current game board"""
+    def get_answer(self, feedback=None):
+        """Return the guessed word based on the clue and current game board.
+
+        feedback: optional reason (str) from the Game explaining why the previous guess was
+        rejected, so the guesser can correct it on a re-request."""
         pass
 
 
 class HumanGuesser(Guesser):
     """Guesser derived class for human interaction"""
 
-    def __init__(self):
+    def __init__(self, team="Red"):
         super().__init__()
         self.team = team
-        pass
 
     def set_clue(self, clue, num):
         print("The clue is:", clue, num)
@@ -52,7 +54,9 @@ class HumanGuesser(Guesser):
     def set_board(self, words):
         self.words = words
 
-    def get_answer(self):
+    def get_answer(self, feedback=None):
+        if feedback:
+            print("Previous guess rejected: " + feedback)
         answer_input = input("Guesser makes turn.\nPlease enter a valid Word >> ")
         type(answer_input)
 

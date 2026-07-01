@@ -9,7 +9,7 @@ class AICodemaster(Codemaster):
         super().__init__()
         self.team = team
         system_prompt = game_rules + "You are playing the game Codenames as the " + team + " Codemaster. "
-        self.manager = GPT(system_prompt=system_prompt, version="gpt-4o-2024-05-13")
+        self.manager = GPT(system_prompt=system_prompt, version="gemma-4-12b-qat")
 
     def set_game_state(self, words, maps):
         self.words = words
@@ -31,12 +31,14 @@ class AICodemaster(Codemaster):
                 assassin.append(self.words[i])
         return red, blue, civilian, assassin
 
-    def get_clue(self):
+    def get_clue(self, feedback=None):
         invalid_timer = 0
         clue = None
         number = None
         red, blue, civilian, assassin = self.get_remaining_options()
-        prompt = ""
+        # Seed the prompt with the Game's rejection reason (if any) so the model
+        # knows why its previous clue was rejected on a re-request.
+        prompt = (feedback + " ") if feedback else ""
         while clue is None or number is None:
             prompt += "The remaining words are: "
             prompt += "Red: " + str(red) + ". "

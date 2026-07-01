@@ -16,6 +16,12 @@ class GameCondition(enum.Enum):
     BLUE_WIN = 3
 
 
+# Number of times the Game will re-ask an agent for a rule-compliant move before
+# falling back (default clue for the codemaster, random word for the guesser).
+MAX_CLUE_ATTEMPTS = 5
+MAX_GUESS_ATTEMPTS = 5
+
+
 class Game:
     """Class that setups up game details and calls Codemaster/Guesser pairs to play the game
     """
@@ -190,6 +196,42 @@ class Game:
         """Return the move history"""
         return self.move_history
 
+    def _validate_clue(self, clue, clue_num, words_in_play):
+        """Authoritatively check a codemaster clue against the Codenames rules.
+
+        Returns (is_valid, reason). The Game -- not the agent -- is the referee:
+        agents may self-check, but this is the final say. Covered cards (prefixed
+        with '*') are skipped, since a covered word may legally be reused."""
+        clue_norm = str(clue).upper().strip()
+        if clue_norm == "" or " " in clue_norm:
+            return False, "The clue must be a single word. "
+        try:
+            n = int(clue_num)
+        except (ValueError, TypeError):
+            return False, "The clue number must be an integer. "
+        if n < 0:
+            return False, "The clue number cannot be negative. "
+        for w in words_in_play:
+            if w[0] == '*':
+                continue
+            wu = w.upper().strip()
+            if clue_norm == wu:
+                return False, "The clue cannot be a word that is already on the board. "
+            if clue_norm in wu or wu in clue_norm:
+                return False, "The clue cannot be derived from or derive a word on the board. "
+        return True, None
+
+    def _validate_guess(self, guess, words_in_play):
+        """Authoritatively check a guesser guess against the Codenames rules.
+
+        Returns (is_valid, reason). A guess must be one of the uncovered words
+        currently on the board."""
+        g = str(guess).upper().strip()
+        for w in words_in_play:
+            if w[0] != '*' and g == w.upper().strip():
+                return True, None
+        return False, "That is not one of the remaining words on the board. "
+
     def _accept_guess(self, guess_index, game_condition):
         """Function that takes in an int index called guess to compare with the key grid
         """
@@ -318,26 +360,64 @@ class Game:
             self._display_key_grid()
             self._display_board_codemaster()
 
-            # codemaster gives clue & number here
+            # codemaster gives clue & number here; the Game is the referee and
+            # re-asks (with the reason) until the clue is legal or attempts run out.
             clue, clue_num = codemaster.get_clue()
+            clue_attempts = 0
+            while True:
+                clue_valid, clue_reason = self._validate_clue(clue, clue_num, words_in_play)
+                if clue_valid:
+                    break
+                clue_attempts += 1
+                print("Rejected clue: (" + str(clue) + ", " + str(clue_num) + ") -- " + clue_reason)
+                if clue_attempts >= MAX_CLUE_ATTEMPTS:
+                    print("Too many invalid clues; using default clue.")
+                    clue, clue_num = "", 1
+                    break
+                clue, clue_num = codemaster.get_clue(feedback=clue_reason)
+
             self.move_history.append([current_team+"_Codemaster", clue, clue_num])
             turn_counter += 1
-            keep_guessing = True
             clue_num = int(clue_num)
 
             print('\n' * 2)
             guesser.set_clue(clue, clue_num)
 
-            while keep_guessing:
+            # The Game enforces the per-turn guess cap: up to clue_num + 1 guesses,
+            # or unlimited when the clue number is 0. The guesser is never required
+            # to guess and may pass at any point.
+            guesses_made = 0
+            max_guesses = float('inf') if clue_num == 0 else clue_num + 1
+            keep_guessing = True
+
+            while keep_guessing and guesses_made < max_guesses:
 
                 move_history = self.get_move_history()
                 guesser.set_move_history(move_history)
                 guesser.set_board(words_in_play)
+
+                # guesser answers; the Game validates the guess and re-asks (with
+                # the reason) until legal or attempts run out, then picks at random.
                 guess_answer = guesser.get_answer()
+                guess_attempts = 0
+                while guess_answer is not None and guess_answer != "no comparisons":
+                    guess_valid, guess_reason = self._validate_guess(guess_answer, words_in_play)
+                    if guess_valid:
+                        break
+                    guess_attempts += 1
+                    print("Rejected guess: " + str(guess_answer) + " -- " + guess_reason)
+                    if guess_attempts >= MAX_GUESS_ATTEMPTS:
+                        remaining = [w for w in words_in_play if w[0] != '*']
+                        guess_answer = random.choice(remaining)
+                        print("Too many invalid guesses; selecting random remaining word: " + guess_answer)
+                        break
+                    guess_answer = guesser.get_answer(feedback=guess_reason)
 
                 # if no comparisons were made/found than retry input from codemaster
                 if guess_answer is None or guess_answer == "no comparisons":
                     break
+
+                guesses_made += 1
                 guess_answer_index = words_in_play.index(guess_answer.upper().strip())
                 game_condition_result = self._accept_guess(guess_answer_index, game_condition)
 
@@ -345,7 +425,12 @@ class Game:
                     print('\n' * 2)
                     self._display_board_codemaster()
                     print("Keep Guessing? the clue is ", clue, clue_num)
-                    keep_guessing = guesser.keep_guessing()
+                    # Only offer another guess while under the cap; the Game, not
+                    # the guesser, has the final say on when the turn must end.
+                    if guesses_made < max_guesses:
+                        keep_guessing = guesser.keep_guessing()
+                    else:
+                        keep_guessing = False
                     self.move_history.append([current_team+"_Guesser", guess_answer, self.words_on_board[guess_answer_index], keep_guessing])
 
                     if not keep_guessing:
