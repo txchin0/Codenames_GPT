@@ -324,3 +324,62 @@ Alternatively, you can use your system's packaging system (*apt-get* on Debian, 
 * Open gpt_manager.py and add your OpenAI API key near the top of the file where it says, "ENTER YOUR API KEY HERE".
 * After this, you should be able to use the codemaster_GPT and guesser_GPT agents.
 * For example, running "uv run python simple_example.py" (from the `codenames/` directory) will perform a single game between both GPT agents.
+
+## Playing in the Browser (Web UI)
+
+A lightweight web interface (`codenames/webui/`) lets a human play Codenames against — or alongside — the bots from a browser. The board is styled after the physical game, with a live history of clues and guesses down the side, and the interface adapts to whichever role you are playing (Spymaster/Codemaster or Operative/Guesser).
+
+It runs the standard `Game` engine **unmodified**: a human simply fills one or more of the four seats and the rest are played by bots. There are **no extra dependencies** — the server uses only the Python standard library.
+
+Start it from the project root and open the printed URL (http://127.0.0.1:8000):
+
+```
+uv run python codenames/webui/server.py
+```
+
+Use `--port <n>` to change the port and `--open` to launch a browser automatically.
+
+In the **New Game** dialog, pick who plays each seat:
+* **Human** — you play that seat in the browser.
+* **AI agent** — the LLM-backed `AICodemaster` / `AIGuesser` (needs the local model server running; see *OpenAI GPT Agent* above).
+* **Random bot** — a built-in, zero-setup bot, handy for trying the UI right away without a model.
+
+How it plays:
+* As a **Spymaster** the key grid is revealed so you can enter a one-word clue and a number (use `0` for unlimited guesses).
+* As an **Operative** the key is hidden and you click words on the board to guess; after a correct guess you choose whether to keep guessing or end the turn.
+* The **Spymaster view** toggle reveals the key while spectating bot games (it is disabled during a human's guess so it can't be used to cheat).
+* Tick **Single-team track** for the single-team scoring variant (Red plays alone).
+
+## Remote Multiplayer (Cloudflare Tunnel)
+
+Two people, each with their own clone, can play across the internet. **One player hosts** the authoritative game and exposes it with a Cloudflare *quick tunnel* (no account, no domain); **the other joins** over the public URL. On either side, each seat can be a **human in a browser** or that player's **own agent** running locally with their own model/API key — the agents connect to the host's game over HTTP, so everyone stays in sync with one authoritative board and key.
+
+This still uses only the Python standard library. The tunnel needs the external [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) binary on the host only (e.g. `winget install --id Cloudflare.cloudflared`).
+
+**Host** — start the server and open a public tunnel:
+
+```
+uv run python codenames/webui/server.py --tunnel
+```
+
+The console prints a public `https://<random>.trycloudflare.com` URL — share it with the other player. (Without `cloudflared` installed, the server still runs locally and you can start the tunnel yourself with `cloudflared tunnel --url http://localhost:8000`.) The quick-tunnel URL changes every run, so share a fresh one each session.
+
+In the **New Game** dialog, set any seat the *remote* player should fill (human or their agent) to **Remote player**, and set your own seats to **Human** (or **AI/Random**). Then each browser claims its seats from the **Multiplayer seats** lobby shown above the board.
+
+**Guest — play in a browser:** open the shared URL and click **Claim** on a *Remote player* seat. You only ever receive the key when you are the Spymaster on your own turn; operatives never see it.
+
+**Guest (or host) — attach your own agent** to a seat instead of playing it by hand:
+
+```
+python codenames/webui/agent_client.py \
+    --url https://<random>.trycloudflare.com \
+    --seat guesser_blue \
+    --agent players.guesser_GPT:AIGuesser
+```
+
+`--agent` takes any `module:ClassName` implementing the framework's `Codemaster` / `Guesser` interface — the built-in LLM agents (`players.codemaster_GPT:AICodemaster`, `players.guesser_GPT:AIGuesser`) **or your own class**, exactly as for terminal play. Omit it to use the built-in agent for that seat's role. The client prints a seat token; pass it back with `--token <token>` to reconnect if the client restarts mid-game.
+
+Notes:
+* Add `--turn-timeout <seconds>` on the host so an abandoned turn falls back to a safe default (pass/empty clue) instead of hanging the game.
+* Anyone with the URL can watch the game and read the static files; per-seat tokens gate *actions* and the key. Fine for a friendly game — don't treat the URL as secret-safe.
+* You can test the whole flow **without a tunnel** on one machine: run the server, create a game with a `Remote player` seat, and point `agent_client.py` at `http://127.0.0.1:8000`.

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codenames</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <h1>CODE<span>NAMES</span></h1>
+    </div>
+    <div class="turn-strip" id="turn-strip"></div>
+    <div class="topbar-actions">
+      <label class="toggle" id="spy-toggle-wrap" title="Reveal the key grid">
+        <input type="checkbox" id="spy-toggle">
+        <span>Spymaster view</span>
+      </label>
+      <button id="new-game-btn" class="btn">New Game</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="board-area">
+      <div class="lobby" id="lobby" hidden></div>
+      <div class="scoreboard" id="scoreboard"></div>
+      <div class="board" id="board"></div>
+      <div class="action-bar" id="action-bar">
+        <div class="action-placeholder">Start a new game to begin.</div>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <h2>Clue &amp; Guess History</h2>
+      <div class="history" id="history">
+        <div class="history-empty">No moves yet.</div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Setup modal -->
+  <div class="modal-backdrop" id="setup-modal" hidden>
+    <div class="modal">
+      <h2>New Game</h2>
+      <p class="modal-sub">Choose who plays each seat &mdash; a human here, an AI agent, a random bot, or a <strong>Remote player</strong> (a friend's browser or agent joining over the tunnel).</p>
+      <div class="setup-grid">
+        <div class="team-col red">
+          <h3>Red Team</h3>
+          <label>Spymaster<select id="codemaster_red"></select></label>
+          <label>Operative<select id="guesser_red"></select></label>
+        </div>
+        <div class="team-col blue" id="blue-col">
+          <h3>Blue Team</h3>
+          <label>Spymaster<select id="codemaster_blue"></select></label>
+          <label>Operative<select id="guesser_blue"></select></label>
+        </div>
+      </div>
+      <div class="setup-opts">
+        <label class="chk"><input type="checkbox" id="single_team"> Single-team track (Red plays alone)</label>
+        <label class="seed-field">Seed <input type="text" id="seed" value="time" spellcheck="false"></label>
+      </div>
+      <div id="ai-note" class="ai-note"></div>
+      <div class="modal-actions">
+        <button id="start-btn" class="btn primary">Start Game</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

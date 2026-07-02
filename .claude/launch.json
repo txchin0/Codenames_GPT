@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "codenames-webui",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["codenames/webui/server.py", "--port", "8140"],
+      "port": 8140
+    }
+  ]
+}
