@@ -13,6 +13,7 @@ then open http://127.0.0.1:8000 in a browser.
 import os
 import sys
 import json
+import socket
 import argparse
 import threading
 import traceback
@@ -287,6 +288,19 @@ class Handler(BaseHTTPRequestHandler):
         pass  # keep the console clean; the engine already prints game progress
 
 
+def _port_in_use(host, port):
+    """True if something is already listening on ``host:port``.
+
+    We *connect* rather than trusting bind() to fail: on Windows the server sets
+    ``allow_reuse_address`` (SO_REUSEADDR), which lets a second process silently
+    share the port -- exactly the trap that leaves a stale server answering.
+    """
+    target = host if host not in ("", "0.0.0.0") else "127.0.0.1"
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(0.5)
+        return sock.connect_ex((target, port)) == 0
+
+
 def main():
     global TURN_TIMEOUT
     parser = argparse.ArgumentParser(description="Codenames web UI server.")
@@ -302,6 +316,18 @@ def main():
     args = parser.parse_args()
 
     TURN_TIMEOUT = args.turn_timeout
+
+    if _port_in_use(args.host, args.port):
+        print(f"\nERROR: port {args.port} is already in use -- another server is "
+              f"probably still running.\n"
+              f"Stop it first (Ctrl+C in its terminal), or start this one on a "
+              f"different port with --port <n>.\n"
+              f"On Windows a stale server can silently share the port; to clear "
+              f"any lingering ones:\n"
+              f"  Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | "
+              f"Where-Object {{ $_.CommandLine -match 'server\\.py' }} | "
+              f"ForEach-Object {{ Stop-Process -Id $_.ProcessId -Force }}\n")
+        sys.exit(1)
 
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     url = f"http://{args.host}:{args.port}"

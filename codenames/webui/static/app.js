@@ -134,14 +134,15 @@ function renderLobby() {
   for (const seat of SEATS) {
     const info = seats[seat];
     if (!info) continue;
+    const claimable = info.kind === "network" || info.kind === "human";
     const mine = !!myTokens[seat];
     let status, cls = "lobby-seat";
-    if (info.kind !== "network") { status = KIND_LABEL[info.kind] || info.kind; cls += " local"; }
+    if (!claimable) { status = KIND_LABEL[info.kind] || info.kind; cls += " local"; }
     else if (mine) { status = "You"; cls += " mine"; }
     else if (info.claimed) { status = "Taken"; cls += " taken"; }
     else { status = null; cls += " open"; }
     const node = h("div", { class: cls }, h("span", { class: "ls-name" }, SEAT_LABEL[seat]));
-    if (info.kind === "network" && !mine && !info.claimed) {
+    if (claimable && !mine && !info.claimed) {
       node.append(h("button", { class: "btn tiny", onclick: () => claimSeat(seat) }, "Claim"));
     } else {
       node.append(h("span", { class: "ls-status" }, status));

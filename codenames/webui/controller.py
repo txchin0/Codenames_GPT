@@ -196,8 +196,13 @@ class GameController:
         with self._lock:
             if seat not in self.roles:
                 return False, "Unknown seat: {!r}".format(seat)
-            if self.roles.get(seat) != "network":
-                return False, "Seat {!r} is not open to remote players.".format(seat)
+            if not self.network_mode:
+                return False, "This is not a network game."
+            # In a network game every human-played seat is claimed from the lobby --
+            # "network" seats and the host's own "human" seats alike. Only bot seats
+            # (ai/random) are off-limits.
+            if self.roles.get(seat) not in ("network", "human"):
+                return False, "Seat {!r} is played by a bot.".format(seat)
             held = self.claims.get(seat)
             if held is not None:
                 if want_token and want_token == held:
@@ -274,11 +279,9 @@ class GameController:
         """
         with self._lock:
             if self.network_mode:
+                seat = self.token_seat.get(token)
                 reveal = (self.status == "finished") or (
-                    token is not None
-                    and self.pending is not None
-                    and self.pending["type"] == "clue"
-                    and self._pending_seat() == self.token_seat.get(token))
+                    seat is not None and str(seat).startswith("codemaster_"))
             else:
                 reveal = self._should_reveal()
             state = {
