@@ -475,6 +475,22 @@ function init() {
   $("single_team").addEventListener("change", syncSingleTeam);
   $("spy-toggle").addEventListener("change", (e) => post("/api/reveal", { reveal: e.target.checked }));
 
+  const colorblindOn = localStorage.getItem("cn_colorblind") === "1";
+  document.body.classList.toggle("colorblind", colorblindOn);
+  $("colorblind-toggle").checked = colorblindOn;
+  $("colorblind-toggle").addEventListener("change", (e) => {
+    document.body.classList.toggle("colorblind", e.target.checked);
+    localStorage.setItem("cn_colorblind", e.target.checked ? "1" : "0");
+  });
+
+  const highContrastOn = localStorage.getItem("cn_high_contrast") === "1";
+  document.body.classList.toggle("high-contrast", highContrastOn);
+  $("contrast-toggle").checked = highContrastOn;
+  $("contrast-toggle").addEventListener("change", (e) => {
+    document.body.classList.toggle("high-contrast", e.target.checked);
+    localStorage.setItem("cn_high_contrast", e.target.checked ? "1" : "0");
+  });
+
   fetch("/api/state").then((r) => r.json()).then((s) => {
     aiAvailable = !!s.ai_available;
     buildSelects();
